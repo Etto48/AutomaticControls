@@ -10,7 +10,7 @@ W_MAX = +5
 
 K_MIN = -2
 K_MAX = +2
-PRECISION = 1000
+PRECISION = 100
 
 def plot_analisys(G_string):
     s,w,k,bf = sp.symbols("s,__W__,__K__,__BODE_FUNCTION__")
@@ -117,16 +117,27 @@ def plot_analisys(G_string):
     
 
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(10,5),layout="tight")
     fig.text(0.5,0.95,"G(s) = "+str(G_expr),{"size":9},ha="center")
-    grid = gs.GridSpec(2,3,left=0.1,right=0.9,top=0.9,bottom=0.1,wspace=0,hspace=0)
+    grid = gs.GridSpec(2,3,left=0.05,right=0.95,top=0.9,bottom=0.1,wspace=0,hspace=0)
     plots:list[plt.Axes] = []
     plots.append(fig.add_subplot(grid[0,0]))
     plots.append(fig.add_subplot(grid[1,0],sharex=plots[-1]))
     plots.append(fig.add_subplot(grid[:,1]))
     plots.append(fig.add_subplot(grid[:,2]))
+    for plot in plots[0:2]:
+        plot.set_xscale("log")
+        plot.axvline(1,color="black")
+        plot.axhline(0,color="black")
+    for plot in plots[2:]:
+        plot.set_xscale("linear")
+        plot.axis('equal')
+        plot.axvline(0,color="black")
+        plot.axhline(0,color="black")
     for plot in plots:
-        plot.grid(True)
+        plot.grid(True,which="major",color="gray")
+        plot.grid(True,which="minor",color="gray",alpha=0.3)
+        plot.minorticks_on()
         #plot.axhline(0,color="black")
     plots[0].plot(w_space,bode_aplitude_array,color="r",label="Bode Amplitude")
     plots[1].plot(w_space,bode_phase_array,color="b",label="Bode Phase")
@@ -143,14 +154,6 @@ def plot_analisys(G_string):
     plots[3].scatter(root_locus_x,root_locus_y,s=1,color="m",label="Root Locus")
     plots[3].scatter(zeros_x,zeros_y,color="m",marker="x",label="Zeros")
     plots[3].scatter(poles_x,poles_y,s=50,facecolors='none', edgecolors='m',marker="o",label="Poles")
-    plots[0].set_xscale("log")
-    #plots[0].axvline(1,color="black")
-    plots[1].set_xscale("log")
-    #plots[1].axvline(1,color="black")
-    plots[2].set_xscale("linear")
-    #plots[2].axvline(0,color="black")
-    plots[3].set_xscale("linear")
-    #plots[3].axvline(0,color="black")
     fig.legend()
     plt.show()
 
