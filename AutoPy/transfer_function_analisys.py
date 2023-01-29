@@ -2,6 +2,7 @@ import sympy as sp
 import math
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gs
+import matplotlib.cm as cm
 import numpy as np
 import random
 import warnings
@@ -11,6 +12,9 @@ W_MAX = +5
 
 K_MIN = -4
 K_MAX = +4
+
+S_MIN = -10
+S_MAX = +10
 
 NYQUIST_BOUNDS = 1.5
 
@@ -92,7 +96,7 @@ def plot_analisys(G_string):
     bode_function_LAMBDA = sp.lambdify(w,bode_function)
     for i,w_val in enumerate(w_space):
         bode_function_array.append(bode_function_LAMBDA(w_val))
-        print(f"\r\033[J{current_pass+1}/{len(PASSES)} ({PASSES[current_pass]}) {i+1}/{len(w_space)} {(i+1)/len(w_space)*100:0.1f}%",end="")
+        print(f"\r\033[J{current_pass+1}/{len(PASSES)} ({PASSES[current_pass]}) {i+1}/{PRECISION} {(i+1)/PRECISION*100:0.1f}%",end="")
     # Bode Amplitude and Phase
     current_pass+=1
     bode_amplitude_LAMBDA = sp.lambdify(bf,bode_amplitude)
@@ -100,19 +104,19 @@ def plot_analisys(G_string):
     for i,bf_val in enumerate(bode_function_array):
         bode_amplitude_array.append(bode_amplitude_LAMBDA(bf_val))
         bode_phase_array.append(bode_phase_LAMBDA(bf_val))
-        print(f"\r\033[J{current_pass+1}/{len(PASSES)} ({PASSES[current_pass]}) {i+1}/{len(w_space)} {(i+1)/len(w_space)*100:0.1f}%",end="")
+        print(f"\r\033[J{current_pass+1}/{len(PASSES)} ({PASSES[current_pass]}) {i+1}/{PRECISION} {(i+1)/PRECISION*100:0.1f}%",end="")
     # Nyquist Inverse Curve
     current_pass+=1
     for i,bf_val in enumerate(bode_function_array):
         nyquist_curve_points_iy.append(-sp.im(bf_val))
         nyquist_curve_points_ix.append(sp.re(bf_val))
-        print(f"\r\033[J{current_pass+1}/{len(PASSES)} ({PASSES[current_pass]}) {i+1}/{len(w_space)} {(i+1)/len(w_space)*100:0.1f}%",end="")
+        print(f"\r\033[J{current_pass+1}/{len(PASSES)} ({PASSES[current_pass]}) {i+1}/{PRECISION} {(i+1)/PRECISION*100:0.1f}%",end="")
     # Nyquist Direct Curve
     current_pass+=1
     for i,bf_val in enumerate(bode_function_array):
         nyquist_curve_points_y.append(sp.im(bf_val))
         nyquist_curve_points_x.append(sp.re(bf_val))
-        print(f"\r\033[J{current_pass+1}/{len(PASSES)} ({PASSES[current_pass]}) {i+1}/{len(w_space)} {(i+1)/len(w_space)*100:0.1f}%",end="")
+        print(f"\r\033[J{current_pass+1}/{len(PASSES)} ({PASSES[current_pass]}) {i+1}/{PRECISION} {(i+1)/PRECISION*100:0.1f}%",end="")
     # Root Locus
     current_pass+=1
     try:
@@ -122,14 +126,14 @@ def plot_analisys(G_string):
             warnings.simplefilter("ignore")
             for i,k_val in enumerate(k_space):
                 for root in roots:
-                    root_val = root(k_val+0j)
+                    root_val = complex(root(k_val+0j))
                     root_locus_x.append(sp.re(root_val))
                     root_locus_y.append(sp.im(root_val))
                 for root in roots:
-                    root_val = root(-k_val+0j)
+                    root_val = complex(root(-k_val+0j))
                     root_locus_ix.append(sp.re(root_val))
                     root_locus_iy.append(sp.im(root_val))
-                print(f"\r\033[J{current_pass+1}/{len(PASSES)} ({PASSES[current_pass]}) {i+1}/{len(w_space)} {(i+1)/len(w_space)*100:0.1f}%",end="")
+                print(f"\r\033[J{current_pass+1}/{len(PASSES)} ({PASSES[current_pass]}) {i+1}/{PRECISION} {(i+1)/PRECISION*100:0.1f}%",end="")
     except NotImplementedError:
         for i,k_val in enumerate(k_space):
             f = root_locus_function.subs({k:k_val})
@@ -148,7 +152,7 @@ def plot_analisys(G_string):
                 root_locus_iy.append(sp.im(root))
             except:
                 pass
-            print(f"\r\033[J{current_pass+1}/{len(PASSES)} ({PASSES[current_pass]} / NUMERICAL) {i+1}/{len(w_space)} {(i+1)/len(w_space)*100:0.1f}%",end="")
+            print(f"\r\033[J{current_pass+1}/{len(PASSES)} ({PASSES[current_pass]} / NUMERICAL) {i+1}/{PRECISION} {(i+1)/PRECISION*100:0.1f}%",end="")
     print("\r\033[JDone!")
 
     w_phase_margin = None
@@ -164,7 +168,6 @@ def plot_analisys(G_string):
         if w_gain_margin is None and last_y_phase is not None and (sp.Abs(last_y_phase)>179 and sp.Abs(y_phase)>179 and last_y_phase*y_phase<0):
             w_gain_margin = x
             y_gain_margin = y_amplitude
-
         last_y_phase = y_phase
         last_y_amplitude = y_amplitude
     
@@ -183,9 +186,6 @@ def plot_analisys(G_string):
     for plot in plots:
         plot.set_axisbelow(True)
         plot.grid(True,which="major",color="gray")
-        #plot.grid(True,which="minor",color="gray",alpha=0.3)
-        #plot.minorticks_on()
-        #plot.axhline(0,color="black")
     for plot in plots[0:2]:
         plot.set_xscale("log")
         plot.axvline(1,color="black").set_zorder(0)
@@ -213,14 +213,14 @@ def plot_analisys(G_string):
     plots[3].scatter(root_locus_ix,root_locus_iy,s=1,color=INVERSE_ROOT_LOCUS_COLOR,label="Inverse Root Locus") 
     plots[3].scatter(zeros_x,zeros_y,s=50,facecolors='none', edgecolors=ROOT_LOCUS_COLOR,marker="o",label="Zeros") 
     plots[3].scatter(poles_x,poles_y,color=ROOT_LOCUS_COLOR,marker="x",label="Poles") 
-    plots[3].scatter(breakaway_points,np.zeros_like(breakaway_points),color=ROOT_LOCUS_FEATURES_COLOR,marker="d",label="Breakaway Points") 
+    plots[3].scatter(np.array(breakaway_points,dtype=complex).real,np.array(breakaway_points,dtype=complex).imag,color=ROOT_LOCUS_FEATURES_COLOR,marker="d",label="Breakaway Points") 
     plots[3].scatter([centroid],[0],color=ROOT_LOCUS_FEATURES_COLOR,marker="o",label="Centroid") 
     for i,angle in enumerate(rl_asymptotes_angles):
         asymptote_label = "Asymptote" if i==0 else None
         point2 = centroid + sp.exp(-1j*angle/180*sp.pi)
         xy = ((float(centroid.evalf()),0), (float(sp.re(point2).evalf()),float(sp.im(point2).evalf())))
         plots[3].axline(*xy,color=ROOT_LOCUS_FEATURES_COLOR,linestyle="--",label=asymptote_label)
-    
+
     #fig.legend()
     for plot in plots:
         plot.legend()
