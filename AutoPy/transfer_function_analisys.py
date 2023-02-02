@@ -55,6 +55,7 @@ def plot_analisys(G_string):
     breakaway_points = []
     centroid = None
     rl_asymptotes_angles = []
+    inv_rl_asymptotes_angles = []
     rl_zero_angles = []
     rl_pole_angles = []
     inv_rl_zero_angles = []
@@ -83,6 +84,7 @@ def plot_analisys(G_string):
         if denominator_degree != numerator_degree:
             centroid = (sum(m*p for p,m in poles.items())-sum(m*z for z,m in zeros.items()))/(denominator_degree-numerator_degree)
         rl_asymptotes_angles = [(180+l*360)/(denominator_degree-numerator_degree) for l in range(denominator_degree-numerator_degree)]
+        inv_rl_asymptotes_angles = [(l*360)/(denominator_degree-numerator_degree) for l in range(denominator_degree-numerator_degree)]
     
         def arg_or_zero(point:complex):
             if point == 0:
@@ -292,7 +294,7 @@ def plot_analisys(G_string):
     if w_gain_margin is not None:
         plots[0].axvline(w_gain_margin,linestyle=':',color=BODE_GAIN_MARGIN_COLOR)
         plots[1].axvline(w_gain_margin,linestyle=':',color=BODE_GAIN_MARGIN_COLOR)
-        plots[0].axhline(y_gain_margin,color=BODE_GAIN_MARGIN_COLOR,label=f"GM ~ {1/(10**(y_gain_margin/20)):0.2f}")
+        plots[0].axhline(y_gain_margin,color=BODE_GAIN_MARGIN_COLOR,label=f"GM ~ {-y_gain_margin:0.2f}dB")
     plots[2].plot(nyquist_curve_points_ix,nyquist_curve_points_iy,color=NYQUIST_INVERSE_COLOR,label="Nyquist Inverted Curve")
     plots[2].plot(nyquist_curve_points_x,nyquist_curve_points_y,color=NYQUIST_DIRECT_COLOR,label="Nyquist Direct Curve")
     plots[2].set_xbound(-NYQUIST_BOUNDS,NYQUIST_BOUNDS)
@@ -308,9 +310,14 @@ def plot_analisys(G_string):
         asymptote_label = "Asymptote" if i==0 else None
         point2 = centroid + sp.exp(1j*angle/180*sp.pi)
         xy = ((float(sp.re(centroid).evalf()),float(sp.im(centroid).evalf())), (float(sp.re(point2).evalf()),float(sp.im(point2).evalf())))
-        plots[3].axline(*xy,color=ROOT_LOCUS_FEATURES_COLOR,linestyle="--",label=asymptote_label).set_zorder(2)
-    ARROW_STYLE = {"color":ROOT_LOCUS_TANGENT_COLOR,"head_length":0.2,"head_width":0.1,"length_includes_head":True}
-    IARROW_STYLE = {"color":ROOT_LOCUS_INV_TANGENT_COLOR,"head_length":0.2,"head_width":0.1,"length_includes_head":True}
+        plots[3].axline(*xy,color=ROOT_LOCUS_FEATURES_COLOR,linestyle="--",alpha=0.5,label=asymptote_label).set_zorder(2)
+    for i,angle in enumerate(inv_rl_asymptotes_angles):
+        asymptote_label = "Inverse Asymptote" if i==0 else None
+        point2 = centroid + sp.exp(1j*angle/180*sp.pi)
+        xy = ((float(sp.re(centroid).evalf()),float(sp.im(centroid).evalf())), (float(sp.re(point2).evalf()),float(sp.im(point2).evalf())))
+        plots[3].axline(*xy,color=ROOT_LOCUS_FEATURES_COLOR,linestyle=":",alpha=0.5,label=asymptote_label).set_zorder(2)
+    ARROW_STYLE = {"color":ROOT_LOCUS_TANGENT_COLOR,"head_length":0.2,"head_width":0.1,"length_includes_head":True,"alpha":0.5}
+    IARROW_STYLE = {"color":ROOT_LOCUS_INV_TANGENT_COLOR,"head_length":0.2,"head_width":0.1,"length_includes_head":True,"alpha":0.5}
     name_tangent = True
     for i,z_angle_list in enumerate(rl_zero_angles):
         for j,z_angle in enumerate(z_angle_list):
