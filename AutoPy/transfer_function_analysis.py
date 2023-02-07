@@ -34,7 +34,7 @@ ROOT_LOCUS_TANGENT_COLOR = "indigo"
 ROOT_LOCUS_INV_TANGENT_COLOR = "teal"
 
 def plot_analisys(G_string):
-    s,w,k,bf = sp.symbols("s,__W__,__K__,__BODE_FUNCTION__")
+    s,w,k,bf = sp.symbols("s,w,k,__BODE_FUNCTION__")
     G_expr = sp.simplify(sp.parse_expr(G_string,{"e":math.e,"pi":math.pi,"j":sp.I}))
 
     print("Loading functions...")
@@ -43,7 +43,7 @@ def plot_analisys(G_string):
     bode_function = G_expr.subs({s:sp.I*w})
     bode_amplitude = 20*sp.log(sp.Abs(bf),10)
     bode_phase = sp.arg(bf)/sp.pi*180
-    root_locus_function = sp.simplify(sp.numer(sp.together((1+k*G_expr))))
+    root_locus_function = sp.numer(sp.simplify(sp.denom(G_expr)+k*sp.numer(G_expr)))
     zeros = None
     zeros_x = []
     zeros_y = []
@@ -118,50 +118,6 @@ def plot_analisys(G_string):
             to_append = [a+np.pi/mult for a in to_append]
             inv_rl_zero_angles.append(to_append)
 
-    stabilizing_controller = False
-    try:
-        raise sp.PolynomialError
-        routh_table = [[],[]]
-        retroaction_function = (k*G_expr)/(1+k*G_expr)
-        retroaction_denominator = sp.denom(retroaction_function)
-        retroaction_denominator = sp.Poly(retroaction_denominator, domain = "C[__K__]")
-        coeffs = retroaction_denominator.coeffs()
-        for i,c in enumerate(coeffs):
-            routh_table[i%2].append(c)
-        routh_table[0].append(0)
-        routh_table[0].append(0)
-        routh_table[1].append(0)
-        routh_table[1].append(0)
-        def has_finished(i,j):
-            return (
-                routh_table[i-1][j+1] == 0 and routh_table[i-2][j+1] == 0
-            ) or routh_table[i-1][0] == 0
-        def calc_value(i,j):
-            ret = \
-                -(routh_table[i-2][0]*routh_table[i-1][j+1]
-                -routh_table[i-2][j+1]*routh_table[i-1][0])/routh_table[i-1][0]
-            return ret
-                
-        i,j = (2,0)
-        while not has_finished(i,j):
-            routh_table.append([])
-            while not has_finished(i,j):
-                routh_table[i].append(sp.simplify(calc_value(i,j)))
-                j+=1
-            routh_table[i].append(0)
-            routh_table[i].append(0)
-            i+=1
-            j=0
-        routh_table_first_column = []
-        for l in routh_table[:-1]:
-            routh_table_first_column.append(l[0]>0)
-        stabilizing_controller = sp.solve(routh_table_first_column,k)
-    except sp.PolynomialError:
-        routh_table = None
-        pass
-    
-
-
     bode_amplitude_array = []
     bode_phase_array = []
     bode_function_array = []
@@ -206,7 +162,6 @@ def plot_analisys(G_string):
         print(f"\r\033[J{current_pass+1}/{len(PASSES)} ({PASSES[current_pass]}) {i+1}/{PRECISION} {(i+1)/PRECISION*100:0.1f}%",end="")
     # Root Locus
     current_pass+=1
-    stabilizing_controller_LAMBDA = sp.lambdify(k,stabilizing_controller)
     try:
         roots = sp.solve(root_locus_function,s)
         if len(roots)==0:
@@ -225,8 +180,9 @@ def plot_analisys(G_string):
                     root_locus_iy.append(sp.im(root_val))
                 print(f"\r\033[J{current_pass+1}/{len(PASSES)} ({PASSES[current_pass]}) {i+1}/{PRECISION} {(i+1)/PRECISION*100:0.1f}%",end="")
     except NotImplementedError:
+        root_locus_function_LAMBDA = sp.lambdify([k,s],root_locus_function)
         for i,k_val in enumerate(k_space):
-            f = root_locus_function.subs({k:k_val})
+            f = lambda s: root_locus_function_LAMBDA(k_val,s)
             point = random.choice([-1,1])*sp.I+random.choice([-1,1])*random.random()
             point = 2*point.evalf()
             try:
