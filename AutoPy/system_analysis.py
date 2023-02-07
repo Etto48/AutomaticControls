@@ -1,8 +1,6 @@
 import control
 import numpy as np
 import sympy as sp
-import sys
-sys.path.append("./")
 from AutoPy import utils
 from AutoPy import response
 import matplotlib.pyplot as plt
@@ -10,16 +8,29 @@ import matplotlib.gridspec as gridspec
 
 W_MIN = -5
 W_MAX = 5
-PRECISION = 1000
+T_MIN = 0
+T_MAX = 100
+PRECISION = 10000
 SETTLING_MARGIN = 0.05
 LEGEND_SETTINGS = {"fontsize":"x-small"}
+
+def overshoot_and_settling_time(error,time):
+    settling_index = 0
+    for j,e in enumerate(reversed(error)):
+        settling_index = j
+        if np.abs(e) > SETTLING_MARGIN:
+            break
+    settling_time = time[-settling_index-1]
+    max_error = -min(error)
+    overshoot = 0 if max_error < 0 else max_error
+    return overshoot, settling_time
 
 def analyse(K,G):
     K_tf = control.tf(*utils.get_coeffs(K))
     G_tf = control.tf(*utils.get_coeffs(G))
     Gcl = control.feedback(control.series(K_tf,G_tf)) if K!=0 else G_tf
     gs = gridspec.GridSpec(2*3,2,hspace=0)
-    fig = plt.figure()
+    fig = plt.figure(num="System Analysis")
     plots:list[plt.Axes] = []
     plots.append(fig.add_subplot(gs[0:3,0]))
     plots.append(fig.add_subplot(gs[3:6,0],sharex=plots[-1]))
@@ -50,31 +61,27 @@ def analyse(K,G):
     plots[1].set_ylabel("Phase in deg")
     plots[1].set_xlabel("Frequency in Hz")
     ### Response ###
-    responses = response.get_response(Gcl)
+    t_space = np.linspace(T_MIN,T_MAX,PRECISION)
+    responses = response.get_response(Gcl,t_space)
     for i,(t,f_t,v_t,e_t) in enumerate(responses):
         overshoot = None
         settling_time = None
-        if i == 0:
+        if i == 0 and is_stable:
             # Overshoot and Settling time #
-            settling_index = 0
-            for j,error in enumerate(reversed(e_t)):
-                settling_index = j
-                if np.abs(error) > SETTLING_MARGIN:
-                    break
-            settling_time = t[-settling_index-1]
-            max_val = max(v_t)
-            overshoot = 0 if max_val < 1 else max_val-1
-
+            overshoot, settling_time = overshoot_and_settling_time(e_t,t)
         plots[2+i].plot(t,f_t,color="gray",ls="--",label="Input")
         plots[2+i].plot(t,e_t,color="darkred",alpha=0.5,label=f"Error ({e_t[-1]:.4f})" if is_stable else "Error")
-        plots[2+i].plot(t,v_t,label="Output" if i!=0 or not is_stable else f"Output\nP.O.={100*overshoot:.2f}, Ts={settling_time:.2f}s")
+        plots[2+i].plot(t,v_t,label="Output" if i!=0 or not is_stable else f"Output\nP.O.={100*overshoot:.2f}%, Ts={settling_time:.2f}s")
         plots[2+i].grid()
         plots[2+i].legend(**LEGEND_SETTINGS)
         plots[2+i].set_xlabel("Time in s")
-    fig.text(0.5,0.91,f"{str(Gcl)}" if is_stable else f"{str(Gcl)} UNSTABLE",{"family":"monospace","size":6},ha="center")
+    fig.text(0.2,0.91,f"{str(Gcl)}" if is_stable else f"{str(Gcl)}UNSTABLE",{"family":"monospace","size":6})
     plt.show()
     
 if __name__ == "__main__":
-    G = sp.parse_expr(input("G(s)="))
-    K = sp.parse_expr(input("K(s)="))
-    analyse(K,G)
+    try:
+        G = sp.parse_expr(input("G(s)="))
+        K = sp.parse_expr(input("K(s)="))
+        analyse(K,G)
+    except KeyboardInterrupt:
+        pass

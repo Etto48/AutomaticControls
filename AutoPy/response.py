@@ -23,9 +23,8 @@ STEPS = 1000
 T_MIN = 0
 T_MAX = 100
 
-def get_response(Gcl:control.TransferFunction):
+def get_response(Gcl:control.TransferFunction,time):
     """Returns a list of tuples in the format (time,input,value,error)"""
-    time = np.linspace(T_MIN,T_MAX,STEPS)
     ret = []
     for f in FUNCTIONS:
         t, v = control.forced_response(Gcl,time,f(time))
@@ -41,7 +40,7 @@ def plot_response(G,K):
     gs_kw = {"hspace":0,"wspace":0}
     fig, plots = plt.subplots(len(FUNCTIONS),1,sharex="all",gridspec_kw=gs_kw)
     errors = []
-    responses = get_response(Gcl)
+    responses = get_response(Gcl,np.linspace(T_MIN,T_MAX,STEPS))
     for i,(t,f_t,v_t,e_t) in enumerate(responses):
         plots[i].plot(t,f_t,color="gray",ls="--",label="Input" if i==0 else None)
         errors.append(e_t[-1])
