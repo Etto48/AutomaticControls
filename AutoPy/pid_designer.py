@@ -10,19 +10,24 @@ def controller_from_gains(Kp,Ki,Kd):
     s = sp.Symbol("s")
     return control.tf(*utils.get_coeffs(Kp+Ki/s+Kd*s))
 
-def child(controller_1:tuple[float,float,float],controller_2:tuple[float,float,float],mutation_rate:float=0.1):
+GENERATION_MULT = 10
+
+def child(
+        controller_1:tuple[float,float,float],
+        controller_2:tuple[float,float,float],
+        PID_type:str,
+        mutation_rate:float=0.1):
     child_controller = \
-        (controller_1[0]+controller_2[0])/2 + (random.random()*2-1)*mutation_rate,\
-        (controller_1[1]+controller_2[1])/2 + (random.random()*2-1)*mutation_rate,\
-        (controller_1[2]+controller_2[2])/2 + (random.random()*2-1)*mutation_rate
+        (random.choice([controller_1[0],controller_2[0]]) + random.choice([(GENERATION_MULT*random.random()*2-1)*mutation_rate,0])) if "P" in PID_type else 0,\
+        (random.choice([controller_1[1],controller_2[1]]) + random.choice([(GENERATION_MULT*random.random()*2-1)*mutation_rate,0])) if "I" in PID_type else 0,\
+        (random.choice([controller_1[2],controller_2[2]]) + random.choice([(GENERATION_MULT*random.random()*2-1)*mutation_rate,0])) if "D" in PID_type else 0
     return child_controller
 
-GENERATION_MULT = 1
-def random_controller():
+def random_controller(PID_type:str):
     controller = \
-        (random.random()*2-1)*GENERATION_MULT,\
-        (random.random()*2-1)*GENERATION_MULT,\
-        (random.random()*2-1)*GENERATION_MULT
+        ((random.random()*2-1)*GENERATION_MULT) if "P" in PID_type else 0,\
+        ((random.random()*2-1)*GENERATION_MULT) if "I" in PID_type else 0,\
+        ((random.random()*2-1)*GENERATION_MULT) if "D" in PID_type else 0
     return controller
 
 def loss(Gol:control.TransferFunction,controller:tuple[float,float,float]) -> float:
@@ -45,23 +50,27 @@ def loss(Gol:control.TransferFunction,controller:tuple[float,float,float]) -> fl
 POPULATION = 100
 EPOCHS = 10
 
-def design(Gol:control.TransferFunction):
-    population = [random_controller() for _ in range(POPULATION)]
+def design(Gol:control.TransferFunction,PID_type:str="PI"):
+    population = [random_controller(PID_type) for _ in range(POPULATION)]
     for e in range(EPOCHS):
         fitness = [1/(1+loss(Gol,controller)) for controller in population]
         new_population = []
         for _ in range(POPULATION):
             controllers = random.choices(population,fitness,k=2)
-            new_population.append(child(*controllers,0.1))
-        print(f"Epoch {e+1}/{EPOCHS}")
+            new_population.append(child(*controllers,PID_type,0.1))
+        print(f"\r\033[JEpoch {e+1}/{EPOCHS}",end="")
     population = [(controller,loss(Gol,controller)) for controller in population]
     population.sort(key=lambda x: x[1])
+    print("\r\033[JDone!")
     return population
     
 if __name__ == "__main__":
     G = sp.parse_expr(input("G(s)="))
+    PID = input("PID type [PI]: ").upper()
+    if PID == "":
+        PID = "PI"
     Gol = control.tf(*utils.get_coeffs(G))
-    controllers = design(Gol)
+    controllers = design(Gol,PID)
     s = sp.Symbol("s")
     for (Kp,Ki,Kd),loss_value in controllers[:3]:
         K = Kp + Ki/s + Kd*s
