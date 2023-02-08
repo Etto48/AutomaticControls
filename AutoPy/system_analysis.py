@@ -1,6 +1,8 @@
 import control
 import numpy as np
 import sympy as sp
+import sys
+sys.path.append("./")
 from AutoPy import utils
 from AutoPy import response
 import matplotlib.pyplot as plt
@@ -75,9 +77,11 @@ def analyse(K,G):
         plots[2+i].grid()
         plots[2+i].legend(**LEGEND_SETTINGS)
         plots[2+i].set_xlabel("Time in s")
-    fig.text(0.2,0.91,f"{str(Gcl)}",{"family":"monospace","size":6})
+    fig.text(0.2,0.95,f"{str(Gcl)}",{"family":"monospace","size":6},va="center")
     if not is_stable:
         fig.text(0.1,0.95,"UNSTABLE",{"family":"monospace","size":7,"weight":"bold","color":"red"})
+    else:
+        fig.text(0.1,0.95,"STABLE",{"family":"monospace","size":7,"weight":"bold","color":"green"})
     plt.show()
     
 if __name__ == "__main__":
